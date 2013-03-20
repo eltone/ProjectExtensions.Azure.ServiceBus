@@ -49,6 +49,8 @@ namespace ProjectExtensions.Azure.ServiceBus.Receiver {
         public void CreateSubscription(ServiceBusEnpointData value) {
             Guard.ArgumentNotNull(value, "value");
 
+            EnsureTopic(value.MessageType.Name);
+
             //TODO determine how we can change the filters for an existing registered item
             //ServiceBusNamespaceClient
 
@@ -61,7 +63,7 @@ namespace ProjectExtensions.Azure.ServiceBus.Receiver {
                     value.IsReusable,
                     value.AttributeData != null ? value.AttributeData.ToString() : string.Empty);
 
-                var helper = new AzureReceiverHelper(defaultTopic, configurationFactory, configuration, serializer, verifyRetryPolicy, retryPolicy, value);
+                var helper = new AzureReceiverHelper(topics[value.MessageType.Name], configurationFactory, configuration, serializer, verifyRetryPolicy, retryPolicy, value);
                 mappings.Add(helper);
                 //helper.ProcessMessagesForSubscription();
 
@@ -106,9 +108,11 @@ namespace ProjectExtensions.Azure.ServiceBus.Receiver {
                     }
                 }
 
-                if (configurationFactory.NamespaceManager.SubscriptionExists(defaultTopic.Path, value.SubscriptionName)) {
+                TopicDescription topic = topics[value.MessageType.Name];
+
+                if (topic != null && configurationFactory.NamespaceManager.SubscriptionExists(topic.Path, value.SubscriptionName)) {
                     var filter = new SqlFilter(string.Format(TYPE_HEADER_NAME + " = '{0}'", value.MessageType.FullName.Replace('.', '_')));
-                    retryPolicy.ExecuteAction(() => configurationFactory.NamespaceManager.DeleteSubscription(defaultTopic.Path, value.SubscriptionName));
+                    retryPolicy.ExecuteAction(() => configurationFactory.NamespaceManager.DeleteSubscription(topic.Path, value.SubscriptionName));
                     logger.Info("CancelSubscription Deleted {0}", value.SubscriptionNameDebug);
                 }
             });

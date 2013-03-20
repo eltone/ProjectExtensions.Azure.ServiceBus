@@ -19,19 +19,16 @@ namespace ProjectExtensions.Azure.ServiceBus.Sender {
     /// </summary>
     class AzureBusSender : AzureSenderReceiverBase, IAzureBusSender {
         static Logger logger = LogManager.GetCurrentClassLogger();
-        ITopicClient defaultClient;
+        static readonly IDictionary<string, ITopicClient> topicClients = new Dictionary<string, ITopicClient>();
 
         public AzureBusSender(IBusConfiguration configuration, IServiceBusConfigurationFactory configurationFactory)
             : base(configuration, configurationFactory) {
-            retryPolicy.ExecuteAction(() => {
-                defaultClient = configurationFactory.MessageFactory.CreateTopicClient(defaultTopic.Path);
-            });
         }
 
         public void Close() {
-            if (defaultClient != null) {
-                defaultClient.Close();
-                defaultClient = null;
+            foreach (var topicClient in topicClients) {
+                topicClient.Value.Close();
+                topicClients.Remove(topicClient);
             }
         }
 
@@ -88,6 +85,8 @@ namespace ProjectExtensions.Azure.ServiceBus.Sender {
 
             methodSerializer = methodSerializer ?? configuration.DefaultSerializer.Create();
 
+            string messageKey = typeof(T).ToString();
+
             var sw = new Stopwatch();
             sw.Start();
 
@@ -118,10 +117,22 @@ namespace ProjectExtensions.Azure.ServiceBus.Sender {
                                 }
                             }
 
+                            if (!topicClients.ContainsKey(messageKey) || topicClients[messageKey] == null)
+                            {
+                                topicClients[messageKey] = retryPolicy.ExecuteAction(() => {
+
+                                    // this topic may not be subscribed to by this instance so we need to check on send
+                                    if (!topics.ContainsKey(typeof(T).Name)) {
+                                        EnsureTopic(typeof(T).Name);
+                                    }
+                                    return configurationFactory.MessageFactory.CreateTopicClient(topics[typeof(T).Name].Path);
+                                });
+                            }
+
                             logger.Debug("sendAction BeginSend Type={0} Serializer={1} MessageId={2}", obj.GetType().FullName, serializer.GetType().FullName, message.MessageId);
 
                             // Send the event asynchronously.
-                            defaultClient.BeginSend(message, cb, null);
+                            topicClients[messageKey].BeginSend(message, cb, null);
                         }
                         catch (Exception ex) {
                             failureException = ex;
@@ -133,7 +144,7 @@ namespace ProjectExtensions.Azure.ServiceBus.Sender {
                             failureException = null; //we may retry so we must null out the error.
                             // Complete the asynchronous operation. This may throw an exception that will be handled internally by the retry policy.
                             logger.Debug("sendAction EndSend Begin Type={0} Serializer={1} MessageId={2}", obj.GetType().FullName, serializer.GetType().FullName, message.MessageId);
-                            defaultClient.EndSend(ar);
+                            topicClients[messageKey].EndSend(ar);
                             logger.Debug("sendAction EndSend End Type={0} Serializer={1} MessageId={2}", obj.GetType().FullName, serializer.GetType().FullName, message.MessageId);
                         }
                         catch (Exception ex) {
@@ -184,7 +195,7 @@ namespace ProjectExtensions.Azure.ServiceBus.Sender {
                         var topicException = ex as MessagingEntityNotFoundException;
                         if (topicException != null && topicException.Detail != null && topicException.Detail.Message.IndexOf("40400") > -1) {
                             logger.Info("Topic was deleted. Attempting to Recreate.");
-                            EnsureTopic(this.configuration.TopicName);
+                            EnsureTopic(typeof(T).Name);
                             failureException = new TopicDeletedException();
                             logger.Info("Topic was deleted. Recreate Complete.");
                         }

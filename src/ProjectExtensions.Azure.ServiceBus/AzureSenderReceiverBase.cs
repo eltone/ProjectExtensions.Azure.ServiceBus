@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Web.Routing;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.ServiceBus;
 using NLog;
@@ -28,7 +29,7 @@ namespace ProjectExtensions.Azure.ServiceBus {
             = new RetryPolicy<ServiceBusTransientErrorDetectionStrategy>(30, RetryStrategy.LowMinBackoff, TimeSpan.FromSeconds(5.0), RetryStrategy.LowClientBackoff);
         protected RetryPolicy<ServiceBusTransientErrorToDetermineExistanceDetectionStrategy> verifyRetryPolicy
             = new RetryPolicy<ServiceBusTransientErrorToDetermineExistanceDetectionStrategy>(5, RetryStrategy.LowMinBackoff, TimeSpan.FromSeconds(2.0), RetryStrategy.LowClientBackoff);
-        protected TopicDescription defaultTopic;
+        protected IDictionary<string, TopicDescription> topics = new Dictionary<string, TopicDescription>();
 
         /// <summary>
         /// Base class used to send and receive messages.
@@ -40,7 +41,6 @@ namespace ProjectExtensions.Azure.ServiceBus {
             Guard.ArgumentNotNull(configurationFactory, "configurationFactory");
             this.configuration = configuration;
             this.configurationFactory = configurationFactory;
-            EnsureTopic(configuration.TopicName);
         }
 
         protected void EnsureTopic(string topicName) {
@@ -50,11 +50,11 @@ namespace ProjectExtensions.Azure.ServiceBus {
             try {
                 logger.Info("EnsureTopic Try {0} ", topicName);
                 // First, let's see if a topic with the specified name already exists.
-                defaultTopic = verifyRetryPolicy.ExecuteAction<TopicDescription>(() => {
+                topics[topicName] = verifyRetryPolicy.ExecuteAction<TopicDescription>(() => {
                     return configurationFactory.NamespaceManager.GetTopic(topicName);
                 });
 
-                createNew = (defaultTopic == null);
+                createNew = !topics.ContainsKey(topicName);
             }
             catch (MessagingEntityNotFoundException) {
                 logger.Info("EnsureTopic Does Not Exist {0} ", topicName);
@@ -68,14 +68,16 @@ namespace ProjectExtensions.Azure.ServiceBus {
                     logger.Info("EnsureTopic CreateTopic {0} ", topicName);
                     var newTopic = new TopicDescription(topicName);
 
-                    defaultTopic = retryPolicy.ExecuteAction<TopicDescription>(() => {
+                    topics[topicName] = retryPolicy.ExecuteAction<TopicDescription>(() =>
+                    {
                         return configurationFactory.NamespaceManager.CreateTopic(newTopic);
                     });
                 }
                 catch (MessagingEntityAlreadyExistsException) {
                     logger.Info("EnsureTopic GetTopic {0} ", topicName);
                     // A topic under the same name was already created by someone else, perhaps by another instance. Let's just use it.
-                    defaultTopic = retryPolicy.ExecuteAction<TopicDescription>(() => {
+                    topics[topicName] = retryPolicy.ExecuteAction<TopicDescription>(() =>
+                    {
                         return configurationFactory.NamespaceManager.GetTopic(topicName);
                     });
                 }
