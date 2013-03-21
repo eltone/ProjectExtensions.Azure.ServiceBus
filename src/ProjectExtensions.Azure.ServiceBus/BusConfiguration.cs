@@ -34,7 +34,7 @@ namespace ProjectExtensions.Azure.ServiceBus {
         /// </summary>
         private BusConfiguration() {
             MaxThreads = 1;
-            TopicName = "pro_ext_topic";
+            TopicsPerMessage = 1;
         }
 
         /// <summary>
@@ -153,9 +153,9 @@ namespace ProjectExtensions.Azure.ServiceBus {
         }
 
         /// <summary>
-        /// TopicName
+        /// The number of topics per message type
         /// </summary>
-        public string TopicName {
+        public int TopicsPerMessage {
             get;
             internal set;
         }

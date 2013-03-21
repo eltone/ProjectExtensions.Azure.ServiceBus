@@ -86,9 +86,9 @@ namespace ProjectExtensions.Azure.ServiceBus {
         }
 
         /// <summary>
-        /// TopicName
+        /// Number of topics per message type
         /// </summary>
-        public string TopicName {
+        public int TopicsPerMessage {
             get;
             set;
         }

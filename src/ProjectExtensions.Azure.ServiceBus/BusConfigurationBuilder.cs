@@ -137,8 +137,8 @@ namespace ProjectExtensions.Azure.ServiceBus {
                 this.ServicePath(settings.ServicePath);
             }
 
-            if (!string.IsNullOrWhiteSpace(settings.TopicName)) {
-                this.TopicName(settings.TopicName);
+            if (settings.TopicsPerMessage > 0) {
+                this.TopicsPerMessage(settings.TopicsPerMessage);
             }
 
             foreach (var item in settings.AssembliesToRegister) {
@@ -228,15 +228,14 @@ namespace ProjectExtensions.Azure.ServiceBus {
         }
 
         /// <summary>
-        /// Override the default TopicName
+        /// Sets the number of topics to use per message type
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public BusConfigurationBuilder TopicName(string value) {
-            Guard.ArgumentNotNull(value, "value");
-            configuration.TopicName = value;
+        public BusConfigurationBuilder TopicsPerMessage(int value) {
+            Guard.ArgumentNotZeroOrNegativeValue(value, "value");
+            configuration.TopicsPerMessage = value;
             return this;
         }
-
     }
 }

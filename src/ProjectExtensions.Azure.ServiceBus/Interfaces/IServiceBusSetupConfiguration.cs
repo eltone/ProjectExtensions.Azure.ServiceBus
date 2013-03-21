@@ -53,8 +53,8 @@ namespace ProjectExtensions.Azure.ServiceBus.Interfaces {
         string ServicePath { get; }
 
         /// <summary>
-        /// TopicName
+        /// TopicsPerMessage
         /// </summary>
-        string TopicName { get; }
+        int TopicsPerMessage { get; }
     }
 }

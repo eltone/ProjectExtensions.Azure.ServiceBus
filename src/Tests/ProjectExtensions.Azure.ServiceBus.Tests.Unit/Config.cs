@@ -30,7 +30,6 @@ namespace ProjectExtensions.Azure.ServiceBus.Tests.Unit {
             BusConfiguration.WithSettings()
                                         .UseAutofacContainer(builder.Build())
                                         .ServiceBusApplicationId("AppName")
-                                        .TopicName("test")
                                         .RegisterAssembly(typeof(Config).Assembly)
                                         .Configure();
 
