@@ -19,8 +19,8 @@ namespace ProjectExtensions.Azure.ServiceBus.Tests.Unit.Mocks {
             Guard.ArgumentNotNull(this.serviceBus, "serviceBus");
         }
 
-        public SubscriptionDescription CreateSubscription(SubscriptionDescription description, Filter filter) {
-            return serviceBus.CreateSubscription(description, filter);
+        public SubscriptionDescription CreateSubscription(SubscriptionDescription description) {
+            return serviceBus.CreateSubscription(description);
         }
 
         public TopicDescription CreateTopic(TopicDescription description) {

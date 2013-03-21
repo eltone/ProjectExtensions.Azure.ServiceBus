@@ -12,7 +12,7 @@ namespace ProjectExtensions.Azure.ServiceBus.Interfaces {
     /// </summary>
     interface INamespaceManager {
 
-        SubscriptionDescription CreateSubscription(SubscriptionDescription description, Filter filter);
+        SubscriptionDescription CreateSubscription(SubscriptionDescription description);
         TopicDescription CreateTopic(TopicDescription description);
 
         void DeleteSubscription(string topicPath, string name);

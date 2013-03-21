@@ -18,8 +18,8 @@ namespace ProjectExtensions.Azure.ServiceBus.AzureServiceBusFactories {
             namespaceManager = new NamespaceManager(tokenProvider.ServiceUri, tokenProvider.TokenProvider);
         }
 
-        public SubscriptionDescription CreateSubscription(SubscriptionDescription description, Filter filter) {
-            return namespaceManager.CreateSubscription(description, filter);
+        public SubscriptionDescription CreateSubscription(SubscriptionDescription description) {
+            return namespaceManager.CreateSubscription(description);
         }
 
         public TopicDescription CreateTopic(TopicDescription description) {

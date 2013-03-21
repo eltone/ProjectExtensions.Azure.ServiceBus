@@ -265,9 +265,8 @@ namespace ProjectExtensions.Azure.ServiceBus.Receiver {
 
                 try {
                     logger.Info("CreateSubscription {0} ", value.SubscriptionNameDebug);
-                    var filter = new SqlFilter(string.Format(AzureSenderReceiverBase.TYPE_HEADER_NAME + " = '{0}'", value.MessageType.FullName.Replace('.', '_')));
                     retryPolicy.ExecuteAction(() => {
-                        desc = configurationFactory.NamespaceManager.CreateSubscription(descriptionToCreate, filter);
+                        desc = configurationFactory.NamespaceManager.CreateSubscription(descriptionToCreate);
                     });
                 }
                 catch (MessagingEntityAlreadyExistsException) {

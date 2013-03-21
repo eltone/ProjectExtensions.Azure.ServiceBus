@@ -111,7 +111,6 @@ namespace ProjectExtensions.Azure.ServiceBus.Receiver {
                 TopicDescription topic = topics[value.MessageType.Name];
 
                 if (topic != null && configurationFactory.NamespaceManager.SubscriptionExists(topic.Path, value.SubscriptionName)) {
-                    var filter = new SqlFilter(string.Format(TYPE_HEADER_NAME + " = '{0}'", value.MessageType.FullName.Replace('.', '_')));
                     retryPolicy.ExecuteAction(() => configurationFactory.NamespaceManager.DeleteSubscription(topic.Path, value.SubscriptionName));
                     logger.Info("CancelSubscription Deleted {0}", value.SubscriptionNameDebug);
                 }

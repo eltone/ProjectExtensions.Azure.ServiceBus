@@ -35,16 +35,16 @@ namespace ProjectExtensions.Azure.ServiceBus.Tests.Unit.Mocks {
             Configure();
         }
 
-        public SubscriptionDescription CreateSubscription(SubscriptionDescription description, Filter filter) {
-            SqlFilter sf = filter as SqlFilter;
-            var value = sf.SqlExpression;
-            //we must parse on the first ' and then go to the end of the string  -1 char
-            var index = value.IndexOf('\'');
-            var typeName = value.Substring(index + 1);
-            typeName = typeName.Substring(0, typeName.Length - 1).Replace("_", ".");
+        public SubscriptionDescription CreateSubscription(SubscriptionDescription description) {
+            //SqlFilter sf = filter as SqlFilter;
+            //var value = sf.SqlExpression;
+            ////we must parse on the first ' and then go to the end of the string  -1 char
+            //var index = value.IndexOf('\'');
+            //var typeName = value.Substring(index + 1);
+            //typeName = typeName.Substring(0, typeName.Length - 1).Replace("_", ".");
 
-            //NOTE Limit is test class must exist in this assembly for now.
-            var theType = this.GetType().Assembly.GetType(typeName);
+            ////NOTE Limit is test class must exist in this assembly for now.
+            var theType = this.GetType().Assembly.GetTypes().FirstOrDefault(t => t.Name == description.TopicPath);
 
             _subscriptions.Add(new SubscriptionDescriptionState() {
                 Description = description,
@@ -252,13 +252,10 @@ namespace ProjectExtensions.Azure.ServiceBus.Tests.Unit.Mocks {
             Guard.ArgumentNotNull(type, "type");
 
             BusHelper.SubscribeOrUnsubscribeType((s) => { Debug.WriteLine(s); }, type, config, (info) => {
-
-                var filter = new SqlFilter(string.Format(AzureSenderReceiverBase.TYPE_HEADER_NAME + " = '{0}'", info.MessageType.FullName.Replace('.', '_')));
-
                 var desc = new SubscriptionDescription(info.MessageType.Name, info.SubscriptionName);
                 _endpointMap[desc] = info;
 
-                CreateSubscription(desc, filter);
+                CreateSubscription(desc);
 
                 //TODO determine if we should and can call CreateSubscription on the receiver.
                 //receiver.CreateSubscription(info);

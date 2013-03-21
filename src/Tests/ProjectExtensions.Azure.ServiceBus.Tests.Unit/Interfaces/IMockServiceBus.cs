@@ -9,7 +9,7 @@ namespace ProjectExtensions.Azure.ServiceBus.Tests.Unit.Interfaces {
 
     interface IMockServiceBus : IBus {
 
-        SubscriptionDescription CreateSubscription(SubscriptionDescription description, Filter filter);
+        SubscriptionDescription CreateSubscription(SubscriptionDescription description);
 
         ISubscriptionClient CreateSubscriptionClient(string topicPath, string name, ReceiveMode receiveMode);
 
