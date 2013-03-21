@@ -36,13 +36,6 @@ namespace ProjectExtensions.Azure.ServiceBus.Tests.Unit.Mocks {
         }
 
         public SubscriptionDescription CreateSubscription(SubscriptionDescription description) {
-            //SqlFilter sf = filter as SqlFilter;
-            //var value = sf.SqlExpression;
-            ////we must parse on the first ' and then go to the end of the string  -1 char
-            //var index = value.IndexOf('\'');
-            //var typeName = value.Substring(index + 1);
-            //typeName = typeName.Substring(0, typeName.Length - 1).Replace("_", ".");
-
             ////NOTE Limit is test class must exist in this assembly for now.
             var theType = this.GetType().Assembly.GetTypes().FirstOrDefault(t => t.Name == description.TopicPath);
 
