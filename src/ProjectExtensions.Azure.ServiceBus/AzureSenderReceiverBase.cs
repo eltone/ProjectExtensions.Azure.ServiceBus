@@ -84,11 +84,26 @@ namespace ProjectExtensions.Azure.ServiceBus {
             }
         }
 
+        protected IEnumerable<string> GetTopicNamesForMessageType(Type messageType) {
+            for (int i = 0; i < configuration.TopicsPerMessage; i++) {
+                yield return GetTopicName(messageType, i);
+            }
+        }
+
+        protected string GetRandomTopicNameForMessageType(Type messageType) {
+            int index = new Random().Next(0, configuration.TopicsPerMessage - 1);
+            return GetTopicName(messageType, index);
+        }
+
         public void Dispose() {
             Dispose(true);
             configurationFactory.MessageFactory.Close();
         }
 
         public abstract void Dispose(bool disposing);
+
+        private string GetTopicName(Type messageType, int partitionNumber) {
+            return messageType.Name + partitionNumber;
+        }
     }
 }

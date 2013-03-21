@@ -85,7 +85,7 @@ namespace ProjectExtensions.Azure.ServiceBus.Sender {
 
             methodSerializer = methodSerializer ?? configuration.DefaultSerializer.Create();
 
-            string messageKey = typeof(T).ToString();
+            string topicName = GetRandomTopicNameForMessageType(typeof(T));
 
             var sw = new Stopwatch();
             sw.Start();
@@ -117,22 +117,22 @@ namespace ProjectExtensions.Azure.ServiceBus.Sender {
                                 }
                             }
 
-                            if (!topicClients.ContainsKey(messageKey) || topicClients[messageKey] == null)
+                            if (!topicClients.ContainsKey(topicName) || topicClients[topicName] == null)
                             {
-                                topicClients[messageKey] = retryPolicy.ExecuteAction(() => {
+                                topicClients[topicName] = retryPolicy.ExecuteAction(() => {
 
                                     // this topic may not be subscribed to by this instance so we need to check on send
                                     if (!topics.ContainsKey(typeof(T).Name)) {
-                                        EnsureTopic(typeof(T).Name);
+                                        EnsureTopic(topicName);
                                     }
-                                    return configurationFactory.MessageFactory.CreateTopicClient(topics[typeof(T).Name].Path);
+                                    return configurationFactory.MessageFactory.CreateTopicClient(topics[topicName].Path);
                                 });
                             }
 
                             logger.Debug("sendAction BeginSend Type={0} Serializer={1} MessageId={2}", obj.GetType().FullName, serializer.GetType().FullName, message.MessageId);
 
                             // Send the event asynchronously.
-                            topicClients[messageKey].BeginSend(message, cb, null);
+                            topicClients[topicName].BeginSend(message, cb, null);
                         }
                         catch (Exception ex) {
                             failureException = ex;
@@ -144,7 +144,7 @@ namespace ProjectExtensions.Azure.ServiceBus.Sender {
                             failureException = null; //we may retry so we must null out the error.
                             // Complete the asynchronous operation. This may throw an exception that will be handled internally by the retry policy.
                             logger.Debug("sendAction EndSend Begin Type={0} Serializer={1} MessageId={2}", obj.GetType().FullName, serializer.GetType().FullName, message.MessageId);
-                            topicClients[messageKey].EndSend(ar);
+                            topicClients[topicName].EndSend(ar);
                             logger.Debug("sendAction EndSend End Type={0} Serializer={1} MessageId={2}", obj.GetType().FullName, serializer.GetType().FullName, message.MessageId);
                         }
                         catch (Exception ex) {

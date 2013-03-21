@@ -49,33 +49,31 @@ namespace ProjectExtensions.Azure.ServiceBus.Receiver {
         public void CreateSubscription(ServiceBusEnpointData value) {
             Guard.ArgumentNotNull(value, "value");
 
-            EnsureTopic(value.MessageType.Name);
+            foreach (var topicName in GetTopicNamesForMessageType(value.MessageType)) {
+                EnsureTopic(topicName);
 
-            //TODO determine how we can change the filters for an existing registered item
-            //ServiceBusNamespaceClient
+                lock (lockObject) {
 
-            lock (lockObject) {
+                    logger.Info("CreateSubscription {0} Declared {1} MessageTytpe {2}, IsReusable {3} Custom Attribute {4}",
+                                value.SubscriptionName,
+                                value.DeclaredType.ToString(),
+                                value.MessageType.ToString(),
+                                value.IsReusable,
+                                value.AttributeData != null ? value.AttributeData.ToString() : string.Empty);
 
-                logger.Info("CreateSubscription {0} Declared {1} MessageTytpe {2}, IsReusable {3} Custom Attribute {4}",
-                    value.SubscriptionName,
-                    value.DeclaredType.ToString(),
-                    value.MessageType.ToString(),
-                    value.IsReusable,
-                    value.AttributeData != null ? value.AttributeData.ToString() : string.Empty);
+                    var helper = new AzureReceiverHelper(topics[topicName], configurationFactory, configuration, serializer, verifyRetryPolicy, retryPolicy, value);
+                    mappings.Add(helper);
+                    //helper.ProcessMessagesForSubscription();
 
-                var helper = new AzureReceiverHelper(topics[value.MessageType.Name], configurationFactory, configuration, serializer, verifyRetryPolicy, retryPolicy, value);
-                mappings.Add(helper);
-                //helper.ProcessMessagesForSubscription();
+                    //TODO make a config setting to allow us to run subscriptions on different threads or not.
+                    //create a new thread for processing of the messages.
+                    var t = new Thread(helper.ProcessMessagesForSubscription);
+                    t.Name = value.SubscriptionName;
+                    t.IsBackground = false;
+                    t.Start();
 
-                //TODO make a config setting to allow us to run subscriptions on different threads or not.
-                //create a new thread for processing of the messages.
-                var t = new Thread(helper.ProcessMessagesForSubscription);
-                t.Name = value.SubscriptionName;
-                t.IsBackground = false;
-                t.Start();
-
-            } //lock end
-
+                } //lock end
+            }
         }
 
         /// <summary>
@@ -87,44 +85,46 @@ namespace ProjectExtensions.Azure.ServiceBus.Receiver {
 
             logger.Info("CancelSubscription {0} Declared {1} MessageTytpe {2}, IsReusable {3}", value.SubscriptionName, value.DeclaredType.ToString(), value.MessageType.ToString(), value.IsReusable);
 
-            var subscription = mappings.FirstOrDefault(item => item.Data.EndPointData.SubscriptionName.Equals(value.SubscriptionName, StringComparison.OrdinalIgnoreCase));
+            var subscriptions = mappings.Where(item => item.Data.EndPointData.SubscriptionName.Equals(value.SubscriptionName, StringComparison.OrdinalIgnoreCase));
 
-            if (subscription == null) {
+            if (!subscriptions.Any()) {
                 logger.Info("CancelSubscription Does not exist {0}", value.SubscriptionNameDebug);
                 return;
             }
 
-            subscription.Data.Cancel();
+            foreach (var subscription in subscriptions) {
+                subscription.Data.Cancel();
 
-            Task t = Task.Factory.StartNew(() => {
-                //HACK find better way to wait for a cancel request so we are not blocking.
-                logger.Info("CancelSubscription Deleting {0}", value.SubscriptionNameDebug);
-                for (int i = 0; i < 100; i++) {
-                    if (!subscription.Data.Cancelled) {
-                        Thread.Sleep(1000);
+                Task t = Task.Factory.StartNew(() => {
+                    //HACK find better way to wait for a cancel request so we are not blocking.
+                    logger.Info("CancelSubscription Deleting {0}", value.SubscriptionNameDebug);
+                    for (int i = 0; i < 100; i++) {
+                        if (!subscription.Data.Cancelled) {
+                            Thread.Sleep(1000);
+                        }
+                        else {
+                            break;
+                        }
+                    }
+
+                    TopicDescription topic = topics[value.MessageType.Name];
+
+                    if (topic != null && configurationFactory.NamespaceManager.SubscriptionExists(topic.Path, value.SubscriptionName)) {
+                        retryPolicy.ExecuteAction(() => configurationFactory.NamespaceManager.DeleteSubscription(topic.Path, value.SubscriptionName));
+                        logger.Info("CancelSubscription Deleted {0}", value.SubscriptionNameDebug);
+                    }
+                });
+
+                try {
+                    Task.WaitAny(t);
+                }
+                catch (Exception ex) {
+                    if (ex is AggregateException) {
+                        //do nothing
                     }
                     else {
-                        break;
+                        throw;
                     }
-                }
-
-                TopicDescription topic = topics[value.MessageType.Name];
-
-                if (topic != null && configurationFactory.NamespaceManager.SubscriptionExists(topic.Path, value.SubscriptionName)) {
-                    retryPolicy.ExecuteAction(() => configurationFactory.NamespaceManager.DeleteSubscription(topic.Path, value.SubscriptionName));
-                    logger.Info("CancelSubscription Deleted {0}", value.SubscriptionNameDebug);
-                }
-            });
-
-            try {
-                Task.WaitAny(t);
-            }
-            catch (Exception ex) {
-                if (ex is AggregateException) {
-                    //do nothing
-                }
-                else {
-                    throw;
                 }
             }
         }
