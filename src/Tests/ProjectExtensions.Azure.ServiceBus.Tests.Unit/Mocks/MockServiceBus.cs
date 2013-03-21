@@ -255,7 +255,7 @@ namespace ProjectExtensions.Azure.ServiceBus.Tests.Unit.Mocks {
 
                 var filter = new SqlFilter(string.Format(AzureSenderReceiverBase.TYPE_HEADER_NAME + " = '{0}'", info.MessageType.FullName.Replace('.', '_')));
 
-                var desc = new SubscriptionDescription(config.TopicName, info.SubscriptionName);
+                var desc = new SubscriptionDescription(info.MessageType.Name, info.SubscriptionName);
                 _endpointMap[desc] = info;
 
                 CreateSubscription(desc, filter);
