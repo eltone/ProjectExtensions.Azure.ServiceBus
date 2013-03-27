@@ -65,13 +65,15 @@ namespace ProjectExtensions.Azure.ServiceBus.Receiver {
                     mappings.Add(helper);
                     //helper.ProcessMessagesForSubscription();
 
-                    //TODO make a config setting to allow us to run subscriptions on different threads or not.
-                    //create a new thread for processing of the messages.
-                    var t = new Thread(helper.ProcessMessagesForSubscription);
-                    t.Name = value.SubscriptionName;
-                    t.IsBackground = false;
-                    t.Start();
-
+                    // TODO: use the generated tasks and pass in cancelation tokens to handle receive loop spinning down
+                    if (value.AttributeData != null && value.AttributeData.ThreadsPerSubscription > 0) {
+                        for (int i = 0; i < value.AttributeData.ThreadsPerSubscription; i++) {
+                            Task.Factory.StartNew(helper.ProcessMessagesForSubscription, TaskCreationOptions.LongRunning);
+                        }
+                    }
+                    else {
+                        Task.Factory.StartNew(helper.ProcessMessagesForSubscription, TaskCreationOptions.LongRunning);
+                    }
                 } //lock end
             }
         }

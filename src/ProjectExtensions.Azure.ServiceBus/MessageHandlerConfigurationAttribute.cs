@@ -152,6 +152,15 @@ namespace ProjectExtensions.Azure.ServiceBus {
             set;
         }
 
+        /// <summary>
+        /// Set the number of concurrent tasks fetching messages from the subscription for processing
+        /// </summary>
+        public int ThreadsPerSubscription
+        {
+            get;
+            set;
+        }
+
         internal bool DefaultMessageTimeToLiveSet() {
             return defaultMessageTimeToLiveSet;
         }
