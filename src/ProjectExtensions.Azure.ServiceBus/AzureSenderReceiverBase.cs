@@ -91,7 +91,7 @@ namespace ProjectExtensions.Azure.ServiceBus {
         }
 
         protected string GetRandomTopicNameForMessageType(Type messageType) {
-            int index = new Random().Next(0, configuration.TopicsPerMessage - 1);
+            int index = new Random().Next(configuration.TopicsPerMessage);
             return GetTopicName(messageType, index);
         }
 
